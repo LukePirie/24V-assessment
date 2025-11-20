@@ -58,7 +58,6 @@
 
         <div class="flex justify-between items-center mb-6 border-b pb-2">
             <h1 class="text-3xl font-bold text-gray-800">24V Battery Assessment Report</h1>
-             <!-- Removed User ID/Firebase display as we are using LocalStorage -->
         </div>
         <p class="text-gray-600 mb-8">Fill out the details below. Drafts are auto-saved by Serial Number directly in your browser.</p>
 
@@ -417,7 +416,12 @@
             // Get the save button text element separately to prevent it from being hidden on crash
             const saveButtonText = document.getElementById('save_button_text');
             if (saveButtonText) {
-                saveButtonText.textContent = 'Saving...';
+                // FIX: Added check to prevent setting textContent on null if the save button itself is not ready
+                try {
+                    saveButtonText.textContent = 'Saving...';
+                } catch (e) {
+                    console.warn("Could not set save button text during save.");
+                }
             }
 
             try {
@@ -431,7 +435,12 @@
                 showStatus(`Error saving draft for S/N: ${serialNumber}. Check console.`, true);
             } finally {
                 if (saveButtonText) {
-                    saveButtonText.textContent = 'Save Draft';
+                    // FIX: Added check to prevent setting textContent on null
+                    try {
+                        saveButtonText.textContent = 'Save Draft';
+                    } catch (e) {
+                        console.warn("Could not restore save button text.");
+                    }
                 }
             }
         }
@@ -476,14 +485,14 @@
             });
         }
         
-        // *** FIX APPLIED HERE: Added guard clause to prevent TypeError: Cannot read properties of null ***
+        // *** CRITICAL FIX: Robust element access inside showStatus ***
         function showStatus(message, isError = false, showSpinner = false) {
             const statusDiv = document.getElementById('status_message');
             const spinner = document.getElementById('loading_spinner');
             
-            // CRITICAL FIX: If elements are null, exit immediately to prevent script crash.
-            if (!statusDiv || !spinner) {
-                console.error("FATAL UI ERROR: Status message elements not found. Cannot display status.", { statusDiv, spinner });
+            // CRITICAL FIX: If the main element is null, log a warning and exit, preventing the crash.
+            if (!statusDiv) {
+                console.warn("Status UI not ready. Message:", message, "Error:", isError);
                 return; 
             }
             
@@ -498,27 +507,38 @@
             }
             
             // Handle spinner display
+            const messageSpan = statusDiv.querySelector('span');
+            
             if (showSpinner) {
-                 // We use the internal span to hold the message when the spinner is visible
-                 const messageSpan = statusDiv.querySelector('span');
                  if (messageSpan) {
+                     // FIX: Ensure message is set using messageSpan
                      messageSpan.textContent = message;
                  } else {
                      statusDiv.textContent = message; // Fallback
                  }
                  statusDiv.classList.add('flex', 'items-center', 'justify-between');
-                 spinner.classList.remove('hidden');
+                 if (spinner) {
+                    spinner.classList.remove('hidden');
+                 }
             } else {
                  // Simplifies text for non-loading states
-                 statusDiv.textContent = message;
-                 spinner.classList.add('hidden');
+                 if (messageSpan) {
+                     // FIX: Set status message text content
+                     statusDiv.textContent = message;
+                 } else {
+                     statusDiv.textContent = message;
+                 }
+                 
+                 if (spinner) {
+                    spinner.classList.add('hidden');
+                 }
                  statusDiv.classList.remove('flex', 'items-center', 'justify-between');
             }
         }
 
         function updateCapacitySummary() {
-            const deliveredAh = parseFloat(document.getElementById('delivered_ah').value) || 0;
-            const nominalAh = parseFloat(document.getElementById('nominal_ah').value) || 1;
+            const deliveredAh = parseFloat(document.getElementById('delivered_ah')?.value) || 0;
+            const nominalAh = parseFloat(document.getElementById('nominal_ah')?.value) || 1;
             let percentage = (deliveredAh / nominalAh) * 100;
             percentage = isNaN(percentage) ? 0 : Math.min(100, percentage).toFixed(2);
 
@@ -602,7 +622,7 @@
                 return;
             }
 
-            const serialNumber = document.getElementById('serial_number').value.trim();
+            const serialNumber = document.getElementById('serial_number')?.value.trim();
             if (!serialNumber) {
                 showStatus('Error: Please enter the Battery Serial Number before generating the report.', true);
                 return;
@@ -660,29 +680,36 @@
                     const photoWidth = 180;
                     const photoMargin = 5;
 
-                    // Helper to get image height while maintaining aspect ratio
-                    const getImageHeight = (dataUrl, width) => {
-                        const img = new Image();
-                        img.src = dataUrl;
-                        const aspectRatio = img.height / img.width;
-                        return width * aspectRatio;
+                    // Helper function to create an Image object and calculate aspect-ratio height
+                    const getImageDimensions = (dataUrl, targetWidth) => {
+                        return new Promise(resolve => {
+                            const img = new Image();
+                            img.onload = () => {
+                                const aspectRatio = img.height / img.width;
+                                resolve({ 
+                                    width: targetWidth, 
+                                    height: targetWidth * aspectRatio 
+                                });
+                            };
+                            img.onerror = () => resolve({ width: 0, height: 0 }); // Handle load failure
+                            img.src = dataUrl;
+                        });
                     };
-
 
                     if (batteryPhotoDataUrl) {
                         pdf.text('1. Battery Physical Photo:', 10, currentY);
                         currentY += 5;
-                        const imgHeight = getImageHeight(batteryPhotoDataUrl, photoWidth);
-                        pdf.addImage(batteryPhotoDataUrl, 'JPEG', 15, currentY, photoWidth, imgHeight);
-                        currentY += imgHeight + photoMargin + 10;
+                        const { width: imgW1, height: imgH1 } = await getImageDimensions(batteryPhotoDataUrl, photoWidth);
+                        pdf.addImage(batteryPhotoDataUrl, 'JPEG', 15, currentY, imgW1, imgH1);
+                        currentY += imgH1 + photoMargin + 10;
                     }
 
                     if (ratingPhotoDataUrl) {
                         if (currentY > pdfHeight - 100) { pdf.addPage(); currentY = 20; }
                         pdf.text('2. Rating Screenshot:', 10, currentY);
                         currentY += 5;
-                        const imgHeight = getImageHeight(ratingPhotoDataUrl, photoWidth);
-                        pdf.addImage(ratingPhotoDataUrl, 'JPEG', 15, currentY, photoWidth, imgHeight);
+                        const { width: imgW2, height: imgH2 } = await getImageDimensions(ratingPhotoDataUrl, photoWidth);
+                        pdf.addImage(ratingPhotoDataUrl, 'JPEG', 15, currentY, imgW2, imgH2);
                     }
                 }
 
@@ -709,7 +736,7 @@
         }
 
         async function emailReport() {
-            const serialNumber = document.getElementById('serial_number').value.trim();
+            const serialNumber = document.getElementById('serial_number')?.value.trim();
             if (!serialNumber) {
                 showStatus('Error: Please enter the Battery Serial Number before trying to email.', true);
                 return;
@@ -723,7 +750,7 @@
             
             // After PDF generation (download is initiated by generatePDF), proceed to open mailto link
             const subject = `24V Battery Assessment Report - S/N: ${serialNumber}`;
-            const body = `Please find the attached Battery Quality Assessment Report for battery serial number ${serialNumber}.%0A%0AThe file is named ${serialNumber}.pdf.%0A%0AReport generated by ${document.getElementById('assessor_name').value || 'an assessor'} on: ${new Date().toLocaleDateString()}`;
+            const body = `Please find the attached Battery Quality Assessment Report for battery serial number ${serialNumber}.%0A%0AThe file is named ${serialNumber}.pdf.%0A%0AReport generated by ${document.getElementById('assessor_name')?.value || 'an assessor'} on: ${new Date().toLocaleDateString()}`;
             
             // Add a slight delay to ensure the browser has initiated the download dialogue
             setTimeout(() => {
