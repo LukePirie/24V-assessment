@@ -6,7 +6,7 @@
     <title>24V Battery Assessment Report Tool</title>
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Load required libraries for PDF generation -->
+    <!-- Load required libraries for PDF generation from reliable CDNs -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     
@@ -410,7 +410,7 @@
         function saveDraft() {
             const serialNumber = document.getElementById('serial_number').value.trim();
             if (!serialNumber) {
-                showStatus('Error: Please enter the Battery Serial Number before saving.', true);
+                // If serial number is missing, don't try to save, but also don't show an error on auto-save tick.
                 return;
             }
 
@@ -481,17 +481,16 @@
                 statusDiv.classList.add('bg-green-100', 'text-green-700');
             }
             
+            // Handle spinner display
             if (showSpinner) {
                  statusDiv.querySelector('span').textContent = message;
-                 statusDiv.classList.remove('justify-between');
-                 statusDiv.classList.add('flex', 'items-center');
+                 statusDiv.classList.add('flex', 'items-center', 'justify-between');
                  spinner.classList.remove('hidden');
             } else {
-                 statusDiv.querySelector('span').textContent = '';
+                 // Simplifies text for non-loading states
                  statusDiv.textContent = message;
                  spinner.classList.add('hidden');
-                 statusDiv.classList.remove('flex', 'items-center');
-                 statusDiv.classList.add('justify-between');
+                 statusDiv.classList.remove('flex', 'items-center', 'justify-between');
             }
         }
 
@@ -512,7 +511,7 @@
                     const savedScore = data[`${name}_input`];
                     // Find the hidden input and set its value to ensure continuity
                     const hiddenInput = document.querySelector(`input[name="${name}_input"]`);
-                    if (hiddenInput) hiddenInput.value = savedScore;
+                    if (hiddenInput) { hiddenInput.value = savedScore; }
                     return parseInt(savedScore) || 0;
                 }
                 const input = document.querySelector(`input[name="${name}_input"]`);
@@ -571,6 +570,13 @@
 
         // Main function to generate and save the PDF
         async function generatePDF(download = true) {
+            // CRITICAL CHECK: Ensure jsPDF library is loaded
+            if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF !== 'function') {
+                showStatus('Error: PDF library not loaded. Please try refreshing the page.', true);
+                console.error("jsPDF object is missing or incomplete.");
+                return;
+            }
+
             const serialNumber = document.getElementById('serial_number').value.trim();
             if (!serialNumber) {
                 showStatus('Error: Please enter the Battery Serial Number before generating the report.', true);
@@ -582,7 +588,7 @@
             showStatus('Generating PDF report...', false, true);
 
             // Temporarily hide interactive elements for a clean capture
-            const controlsToHide = document.querySelectorAll('input:not([type="hidden"]), textarea, button, .score-button, .form-radio');
+            const controlsToHide = document.querySelectorAll('input:not([type="hidden"]), textarea, button:not(#download_button):not(#email_button):not(#save_button_text), .score-button, .form-radio');
             controlsToHide.forEach(el => el.style.display = 'none');
             const input = document.getElementById('report-content');
 
@@ -590,24 +596,29 @@
                 // Wait for the next frame to ensure elements are hidden before capturing
                 await new Promise(resolve => setTimeout(resolve, 50)); 
                 
-                const canvas = await html2canvas(input, { scale: 2, useCORS: true });
+                const canvas = await html2canvas(input, { scale: 2, useCORS: true, logging: true });
                 const { jsPDF } = window.jspdf; 
                 const pdf = new jsPDF('p', 'mm', 'a4');
                 const pdfWidth = pdf.internal.pageSize.getWidth();
-                const pageHeight = pdf.internal.pageSize.getHeight();
+                const pdfHeight = pdf.internal.pageSize.getHeight();
                 const imgData = canvas.toDataURL('image/png');
                 const imgProps = pdf.getImageProperties(imgData);
                 const contentHeight = (imgProps.height * pdfWidth) / imgProps.width; // Height of the captured image if scaled to PDF width
                 
-                // --- CORRECTED MULTI-PAGE LOGIC: Fixes the blank page issue ---
-                const pageCount = Math.ceil(contentHeight / pageHeight);
-                for (let i = 0; i < pageCount; i++) {
-                    const srcY = -(i * pageHeight); // Vertical offset for the image on the PDF page
-                    if (i > 0) {
+                // --- CORRECTED MULTI-PAGE LOGIC ---
+                let position = 0;
+                while (position < contentHeight) {
+                    if (position > 0) {
                         pdf.addPage();
                     }
-                    // Draw the entire image, but use the negative Y offset to show only the slice
-                    pdf.addImage(imgData, 'PNG', 0, srcY, pdfWidth, contentHeight);
+                    const remainingHeight = contentHeight - position;
+                    const captureHeight = Math.min(pdfHeight, remainingHeight);
+
+                    // Add image portion: (image data, format, x, y, width, height, alias, compression, rotation)
+                    // The y coordinate is negative to pull the image up to the top of the viewport
+                    pdf.addImage(imgData, 'PNG', 0, -position, pdfWidth, contentHeight);
+
+                    position += pdfHeight;
                 }
                 // --- END CORRECTED MULTI-PAGE LOGIC ---
 
@@ -626,17 +637,17 @@
                     if (batteryPhotoDataUrl) {
                         pdf.text('1. Battery Physical Photo:', 10, currentY);
                         currentY += 5;
-                        const imgHeight = (photoWidth * pdf.internal.pageSize.getHeight()) / pdf.internal.pageSize.getWidth();
-                        pdf.addImage(batteryPhotoDataUrl, 'JPEG', 15, currentY, photoWidth, imgHeight, undefined, 'FAST');
+                        const imgHeight = (photoWidth * pdfHeight) / pdfWidth; // Simple aspect ratio approximation
+                        pdf.addImage(batteryPhotoDataUrl, 'JPEG', 15, currentY, photoWidth, imgHeight);
                         currentY += imgHeight + photoMargin + 10;
                     }
 
                     if (ratingPhotoDataUrl) {
-                        if (currentY > pageHeight - 100) { pdf.addPage(); currentY = 20; }
+                        if (currentY > pdfHeight - 100) { pdf.addPage(); currentY = 20; }
                         pdf.text('2. Rating Screenshot:', 10, currentY);
                         currentY += 5;
-                        const imgHeight = (photoWidth * pdf.internal.pageSize.getHeight()) / pdf.internal.pageSize.getWidth();
-                        pdf.addImage(ratingPhotoDataUrl, 'JPEG', 15, currentY, photoWidth, imgHeight, undefined, 'FAST');
+                        const imgHeight = (photoWidth * pdfHeight) / pdfWidth;
+                        pdf.addImage(ratingPhotoDataUrl, 'JPEG', 15, currentY, photoWidth, imgHeight);
                     }
                 }
 
@@ -650,8 +661,8 @@
                 }
                 
             } catch (error) {
-                console.error('PDF Generation Error:', error);
-                showStatus('Error generating PDF. Check console for details.', true);
+                console.error('PDF Generation Fatal Error:', error);
+                showStatus('Error generating PDF. Please check the browser console (F12) for details on the error.', true);
                 
             } finally {
                 // Restore hidden elements
@@ -667,20 +678,24 @@
                 return;
             }
 
-            // In this client-side environment, we instruct the user to attach the downloaded file.
-            showStatus('PDF is generating. Please allow download, then attach the file to the email draft that opens.', false, true);
-
             // We call generatePDF with 'true' to force the download first, then open mailto
+            // The user must manually attach the downloaded file.
+            showStatus('PDF is generating. Once the download begins, a new window/tab will open to draft the email. Please remember to attach the downloaded file.', false, true);
+
             generatePDF(true).then(() => {
                 const subject = `24V Battery Assessment Report - S/N: ${serialNumber}`;
                 const body = `Please find the attached Battery Quality Assessment Report for battery serial number ${serialNumber}.%0A%0AThe file is named ${serialNumber}.pdf.%0A%0AReport generated by ${document.getElementById('assessor_name').value || 'an assessor'} on: ${new Date().toLocaleDateString()}`;
                 
+                // Add a slight delay to ensure the browser has initiated the download dialogue
                 setTimeout(() => {
+                    // Open mailto link which drafts an email and instructs the user to attach the file
                     window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-                }, 1000); // Small delay to ensure download process starts
+                    showStatus('Email draft opened. Please attach the downloaded PDF file.', false);
+                }, 1500); 
             }).catch(e => {
+                // If PDF generation fails, this catch block handles it (and the specific error is logged inside generatePDF)
                 showStatus('Could not complete PDF generation for email process.', true);
-                console.error(e);
+                console.error("Email process aborted due to PDF generation failure:", e);
             });
         }
 
