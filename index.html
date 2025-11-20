@@ -414,7 +414,11 @@
                 return;
             }
 
-            document.getElementById('save_button_text').textContent = 'Saving...';
+            // Get the save button text element separately to prevent it from being hidden on crash
+            const saveButtonText = document.getElementById('save_button_text');
+            if (saveButtonText) {
+                saveButtonText.textContent = 'Saving...';
+            }
 
             try {
                 const reportData = collectFormData();
@@ -426,7 +430,9 @@
                 console.error("Error saving draft to localStorage:", error);
                 showStatus(`Error saving draft for S/N: ${serialNumber}. Check console.`, true);
             } finally {
-                document.getElementById('save_button_text').textContent = 'Save Draft';
+                if (saveButtonText) {
+                    saveButtonText.textContent = 'Save Draft';
+                }
             }
         }
         
@@ -434,6 +440,8 @@
 
         function renderImagePreview(previewId, dataUrl) {
             const preview = document.getElementById(previewId);
+            if (!preview) return; // Defensive check
+            
             preview.innerHTML = '';
             if (dataUrl) {
                 const img = document.createElement('img');
@@ -448,6 +456,8 @@
         // Function to handle image file selection and preview
         function setupImageInput(inputId, previewId, dataUrlCallback) {
             const input = document.getElementById(inputId);
+            if (!input) return; // Defensive check
+            
             input.addEventListener('change', function() {
                 if (this.files && this.files[0]) {
                     const reader = new FileReader();
@@ -465,12 +475,18 @@
                 }
             });
         }
-
+        
+        // *** FIX APPLIED HERE: Added guard clause to prevent TypeError: Cannot read properties of null ***
         function showStatus(message, isError = false, showSpinner = false) {
             const statusDiv = document.getElementById('status_message');
             const spinner = document.getElementById('loading_spinner');
             
-            statusDiv.textContent = message;
+            // CRITICAL FIX: If elements are null, exit immediately to prevent script crash.
+            if (!statusDiv || !spinner) {
+                console.error("FATAL UI ERROR: Status message elements not found. Cannot display status.", { statusDiv, spinner });
+                return; 
+            }
+            
             statusDiv.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700', 'bg-blue-100', 'text-blue-700');
             
             if (isError) {
@@ -483,7 +499,13 @@
             
             // Handle spinner display
             if (showSpinner) {
-                 statusDiv.querySelector('span').textContent = message;
+                 // We use the internal span to hold the message when the spinner is visible
+                 const messageSpan = statusDiv.querySelector('span');
+                 if (messageSpan) {
+                     messageSpan.textContent = message;
+                 } else {
+                     statusDiv.textContent = message; // Fallback
+                 }
                  statusDiv.classList.add('flex', 'items-center', 'justify-between');
                  spinner.classList.remove('hidden');
             } else {
@@ -500,7 +522,10 @@
             let percentage = (deliveredAh / nominalAh) * 100;
             percentage = isNaN(percentage) ? 0 : Math.min(100, percentage).toFixed(2);
 
-            document.getElementById('capacity_summary').innerHTML = `Capacity Delivered: <span class="text-indigo-600 font-bold">${deliveredAh.toFixed(1)} Ah</span> of <span class="text-indigo-600 font-bold">${nominalAh.toFixed(1)} Ah</span> (<span class="text-lg">${percentage}%</span>)`;
+            const summaryElement = document.getElementById('capacity_summary');
+            if (summaryElement) { // Defensive check
+                summaryElement.innerHTML = `Capacity Delivered: <span class="text-indigo-600 font-bold">${deliveredAh.toFixed(1)} Ah</span> of <span class="text-indigo-600 font-bold">${nominalAh.toFixed(1)} Ah</span> (<span class="text-lg">${percentage}%</span>)`;
+            }
         }
 
         function updateScoreSummary(data = null) {
@@ -524,8 +549,8 @@
                 voltage_spread: getScore('volt_spread_score'),
                 resistance_avg: getScore('avg_res_score'),
                 resistance_spread: getScore('res_spread_score'),
-                charge: parseInt(document.getElementById('charge_score_input').value) || 0,
-                discharge: parseInt(document.getElementById('discharge_score_input').value) || 0,
+                charge: parseInt(document.getElementById('charge_score_input')?.value) || 0,
+                discharge: parseInt(document.getElementById('discharge_score_input')?.value) || 0,
             };
 
             // Set visual state for buttons based on scores
@@ -548,12 +573,12 @@
             const totalResistance = scores.resistance_avg + scores.resistance_spread;
             const totalScore = totalVoltage + totalResistance + scores.charge + scores.discharge;
 
-            // Update display
-            document.getElementById('score_voltage').textContent = `${totalVoltage} / 4`;
-            document.getElementById('score_resistance').textContent = `${totalResistance} / 4`;
-            document.getElementById('score_charge').textContent = `${scores.charge} / 2`;
-            document.getElementById('score_discharge').textContent = `${scores.discharge} / 2`;
-            document.getElementById('score_total').textContent = `${totalScore} / 12`;
+            // Update display (defensive checks added)
+            document.getElementById('score_voltage') && (document.getElementById('score_voltage').textContent = `${totalVoltage} / 4`);
+            document.getElementById('score_resistance') && (document.getElementById('score_resistance').textContent = `${totalResistance} / 4`);
+            document.getElementById('score_charge') && (document.getElementById('score_charge').textContent = `${scores.charge} / 2`);
+            document.getElementById('score_discharge') && (document.getElementById('score_discharge').textContent = `${scores.discharge} / 2`);
+            document.getElementById('score_total') && (document.getElementById('score_total').textContent = `${totalScore} / 12`);
 
             // Update Banding Highlight
             document.querySelectorAll('#banding_list li').forEach(li => {
@@ -583,8 +608,12 @@
                 return;
             }
 
-            const buttons = [document.getElementById('download_button'), document.getElementById('email_button')];
-            buttons.forEach(btn => btn.disabled = true);
+            const downloadButton = document.getElementById('download_button');
+            const emailButton = document.getElementById('email_button');
+            
+            // Disable buttons and show loading status
+            if(downloadButton) downloadButton.disabled = true;
+            if(emailButton) emailButton.disabled = true;
             showStatus('Generating PDF report...', false, true);
 
             // Temporarily hide interactive elements for a clean capture
@@ -611,9 +640,6 @@
                     if (position > 0) {
                         pdf.addPage();
                     }
-                    const remainingHeight = contentHeight - position;
-                    const captureHeight = Math.min(pdfHeight, remainingHeight);
-
                     // Add image portion: (image data, format, x, y, width, height, alias, compression, rotation)
                     // The y coordinate is negative to pull the image up to the top of the viewport
                     pdf.addImage(imgData, 'PNG', 0, -position, pdfWidth, contentHeight);
@@ -623,7 +649,7 @@
                 // --- END CORRECTED MULTI-PAGE LOGIC ---
 
 
-                // Add Photos Page (Existing logic)
+                // Add Photos Page
                 if (batteryPhotoDataUrl || ratingPhotoDataUrl) {
                     pdf.addPage();
                     pdf.setFontSize(16);
@@ -634,10 +660,19 @@
                     const photoWidth = 180;
                     const photoMargin = 5;
 
+                    // Helper to get image height while maintaining aspect ratio
+                    const getImageHeight = (dataUrl, width) => {
+                        const img = new Image();
+                        img.src = dataUrl;
+                        const aspectRatio = img.height / img.width;
+                        return width * aspectRatio;
+                    };
+
+
                     if (batteryPhotoDataUrl) {
                         pdf.text('1. Battery Physical Photo:', 10, currentY);
                         currentY += 5;
-                        const imgHeight = (photoWidth * pdfHeight) / pdfWidth; // Simple aspect ratio approximation
+                        const imgHeight = getImageHeight(batteryPhotoDataUrl, photoWidth);
                         pdf.addImage(batteryPhotoDataUrl, 'JPEG', 15, currentY, photoWidth, imgHeight);
                         currentY += imgHeight + photoMargin + 10;
                     }
@@ -646,7 +681,7 @@
                         if (currentY > pdfHeight - 100) { pdf.addPage(); currentY = 20; }
                         pdf.text('2. Rating Screenshot:', 10, currentY);
                         currentY += 5;
-                        const imgHeight = (photoWidth * pdfHeight) / pdfWidth;
+                        const imgHeight = getImageHeight(ratingPhotoDataUrl, photoWidth);
                         pdf.addImage(ratingPhotoDataUrl, 'JPEG', 15, currentY, photoWidth, imgHeight);
                     }
                 }
@@ -657,7 +692,8 @@
                     pdf.save(filename);
                     showStatus(`PDF generated successfully and saved as ${filename}.`, false);
                 } else {
-                    return pdf.output('blob'); // Return blob for email function
+                    // This is used for the email function
+                    return pdf.output('blob'); 
                 }
                 
             } catch (error) {
@@ -667,36 +703,34 @@
             } finally {
                 // Restore hidden elements
                 controlsToHide.forEach(el => el.style.display = '');
-                buttons.forEach(btn => btn.disabled = false);
+                if(downloadButton) downloadButton.disabled = false;
+                if(emailButton) emailButton.disabled = false;
             }
         }
 
-        function emailReport() {
+        async function emailReport() {
             const serialNumber = document.getElementById('serial_number').value.trim();
             if (!serialNumber) {
                 showStatus('Error: Please enter the Battery Serial Number before trying to email.', true);
                 return;
             }
 
-            // We call generatePDF with 'true' to force the download first, then open mailto
-            // The user must manually attach the downloaded file.
+            // Inform the user that attachment is manual
             showStatus('PDF is generating. Once the download begins, a new window/tab will open to draft the email. Please remember to attach the downloaded file.', false, true);
 
-            generatePDF(true).then(() => {
-                const subject = `24V Battery Assessment Report - S/N: ${serialNumber}`;
-                const body = `Please find the attached Battery Quality Assessment Report for battery serial number ${serialNumber}.%0A%0AThe file is named ${serialNumber}.pdf.%0A%0AReport generated by ${document.getElementById('assessor_name').value || 'an assessor'} on: ${new Date().toLocaleDateString()}`;
-                
-                // Add a slight delay to ensure the browser has initiated the download dialogue
-                setTimeout(() => {
-                    // Open mailto link which drafts an email and instructs the user to attach the file
-                    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-                    showStatus('Email draft opened. Please attach the downloaded PDF file.', false);
-                }, 1500); 
-            }).catch(e => {
-                // If PDF generation fails, this catch block handles it (and the specific error is logged inside generatePDF)
-                showStatus('Could not complete PDF generation for email process.', true);
-                console.error("Email process aborted due to PDF generation failure:", e);
-            });
+            // Generate the PDF file (forcing download=true)
+            await generatePDF(true);
+            
+            // After PDF generation (download is initiated by generatePDF), proceed to open mailto link
+            const subject = `24V Battery Assessment Report - S/N: ${serialNumber}`;
+            const body = `Please find the attached Battery Quality Assessment Report for battery serial number ${serialNumber}.%0A%0AThe file is named ${serialNumber}.pdf.%0A%0AReport generated by ${document.getElementById('assessor_name').value || 'an assessor'} on: ${new Date().toLocaleDateString()}`;
+            
+            // Add a slight delay to ensure the browser has initiated the download dialogue
+            setTimeout(() => {
+                // Open mailto link which drafts an email and instructs the user to attach the file
+                window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                showStatus('Email draft opened. Please attach the downloaded PDF file.', false);
+            }, 1500); 
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -766,7 +800,7 @@
             });
 
             // Serial Number handler for loading drafts
-            document.getElementById('serial_number').addEventListener('blur', function() {
+            document.getElementById('serial_number')?.addEventListener('blur', function() {
                 const sn = this.value.trim();
                 if (sn) {
                     loadDraft(sn);
