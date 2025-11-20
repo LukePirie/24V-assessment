@@ -6,7 +6,7 @@
     <title>24V Battery Assessment Report Tool</title>
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Load required libraries for PDF generation from reliable CDNs -->
+    <!-- Load required libraries for PDF generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     
@@ -33,10 +33,6 @@
             outline: 3px solid #4f46e5;
             outline-offset: 1px;
         }
-        .score-row input[type="number"] {
-            width: 100px; /* fixed width for value inputs */
-            text-align: center;
-        }
         /* Spinner for loading state */
         .spinner {
             border: 4px solid rgba(255, 255, 255, 0.3);
@@ -59,7 +55,7 @@
         <div class="flex justify-between items-center mb-6 border-b pb-2">
             <h1 class="text-3xl font-bold text-gray-800">24V Battery Assessment Report</h1>
         </div>
-        <p class="text-gray-600 mb-8">Fill out the details below. Drafts are auto-saved by Serial Number directly in your browser.</p>
+        <p class="text-gray-600 mb-8">Fill out the details below and click "Download PDF" to save the report.</p>
 
         <!-- Status Message Area -->
         <div id="status_message" class="mt-4 mb-4 p-3 hidden rounded-lg text-sm transition-all duration-300 flex items-center justify-between">
@@ -85,7 +81,6 @@
                     <label class="block md:col-span-2">
                         <span class="text-gray-700 font-bold">Battery Serial Number (S/N)</span>
                         <input type="text" id="serial_number" placeholder="BATT-24V-00123" class="mt-1 block w-full rounded-md border-indigo-500 shadow-sm p-2 text-lg font-mono" required>
-                        <p class="text-xs text-gray-500 mt-1">Changing the S/N will attempt to load a saved draft.</p>
                     </label>
                     <label class="block">
                         <span class="text-gray-700">Battery Type</span>
@@ -129,7 +124,7 @@
                 <!-- 2.1 Voltage Consistency - OCV -->
                 <div class="grid grid-cols-3 gap-4 items-center p-3 bg-gray-50 rounded-lg mb-4 score-row">
                     <p class="font-medium">Open-Circuit Voltage (OCV) [V]</p>
-                    <input type="number" step="0.01" id="ocv_value" placeholder="e.g., 26.5" class="rounded-md border-gray-300 shadow-sm p-1 text-sm mx-auto">
+                    <input type="number" step="0.01" id="ocv_value" placeholder="e.g., 26.5" class="rounded-md border-gray-300 shadow-sm p-1 text-sm mx-auto text-center w-24">
                     <div class="flex space-x-2 justify-end" data-category="ocv">
                         <button type="button" data-score="2" class="score-button bg-green-200 text-green-800 p-2 rounded-lg text-xs">Good (2)</button>
                         <button type="button" data-score="1" class="score-button bg-yellow-200 text-yellow-800 p-2 rounded-lg text-xs">Acceptable (1)</button>
@@ -141,7 +136,7 @@
                 <!-- 2.1 Voltage Consistency - Spread -->
                 <div class="grid grid-cols-3 gap-4 items-center p-3 bg-gray-50 rounded-lg score-row">
                     <p class="font-medium">Voltage Spread Across Cells [mV]</p>
-                    <input type="number" id="volt_spread_value" placeholder="e.g., 15" class="rounded-md border-gray-300 shadow-sm p-1 text-sm mx-auto">
+                    <input type="number" id="volt_spread_value" placeholder="e.g., 15" class="rounded-md border-gray-300 shadow-sm p-1 text-sm mx-auto text-center w-24">
                     <div class="flex space-x-2 justify-end" data-category="volt_spread">
                         <button type="button" data-score="2" class="score-button bg-green-200 text-green-800 p-2 rounded-lg text-xs">Good (2)</button>
                         <button type="button" data-score="1" class="score-button bg-yellow-200 text-yellow-800 p-2 rounded-lg text-xs">Acceptable (1)</button>
@@ -159,7 +154,7 @@
                 <!-- 2.2 Internal Resistance Consistency - Avg -->
                 <div class="grid grid-cols-3 gap-4 items-center p-3 bg-gray-50 rounded-lg mb-4 score-row">
                     <p class="font-medium">Average Resistance [mΩ]</p>
-                    <input type="number" step="0.01" id="avg_res_value" placeholder="e.g., 2.5" class="rounded-md border-gray-300 shadow-sm p-1 text-sm mx-auto">
+                    <input type="number" step="0.01" id="avg_res_value" placeholder="e.g., 2.5" class="rounded-md border-gray-300 shadow-sm p-1 text-sm mx-auto text-center w-24">
                     <div class="flex space-x-2 justify-end" data-category="avg_res">
                         <button type="button" data-score="2" class="score-button bg-green-200 text-green-800 p-2 rounded-lg text-xs">Good (2)</button>
                         <button type="button" data-score="1" class="score-button bg-yellow-200 text-yellow-800 p-2 rounded-lg text-xs">Acceptable (1)</button>
@@ -171,7 +166,7 @@
                 <!-- 2.2 Internal Resistance Consistency - Spread -->
                 <div class="grid grid-cols-3 gap-4 items-center p-3 bg-gray-50 rounded-lg score-row">
                     <p class="font-medium">Resistance Spread [mΩ]</p>
-                    <input type="number" id="res_spread_value" placeholder="e.g., 0.5" class="rounded-md border-gray-300 shadow-sm p-1 text-sm mx-auto">
+                    <input type="number" id="res_spread_value" placeholder="e.g., 0.5" class="rounded-md border-gray-300 shadow-sm p-1 text-sm mx-auto text-center w-24">
                     <div class="flex space-x-2 justify-end" data-category="res_spread">
                         <button type="button" data-score="2" class="score-button bg-green-200 text-green-800 p-2 rounded-lg text-xs">Good (2)</button>
                         <button type="button" data-score="1" class="score-button bg-yellow-200 text-yellow-800 p-2 rounded-lg text-xs">Acceptable (1)</button>
@@ -299,15 +294,9 @@
         </div>
         <!-- End of report-content -->
 
-        <div class="mt-8 pt-6 border-t border-gray-200 flex flex-col md:flex-row space-y-3 md:space-y-0 md:space-x-4">
-            <button onclick="saveDraft()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 px-4 rounded-lg transition duration-150 ease-in-out text-sm">
-                <span id="save_button_text">Save Draft</span>
-            </button>
-            <button onclick="generatePDF(true)" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition duration-150 ease-in-out flex items-center justify-center" id="download_button">
+        <div class="mt-8 pt-6 border-t border-gray-200">
+            <button onclick="generatePDF()" class="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition duration-150 ease-in-out flex items-center justify-center mx-auto" id="download_button">
                 Download PDF Report
-            </button>
-            <button onclick="emailReport()" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition duration-150 ease-in-out" id="email_button">
-                Email Report (as PDF)
             </button>
         </div>
     </div>
@@ -316,140 +305,12 @@
         // --- APP GLOBALS ---
         let batteryPhotoDataUrl = null;
         let ratingPhotoDataUrl = null;
-        let pendingSaveTimeout = null;
-
-        // --- CORE DATA HANDLING (Using LocalStorage for Drafts) ---
-
-        // Generates a unique key for LocalStorage based on the serial number
-        function getStorageKey(serialNumber) {
-            return `battery_report_${serialNumber.toUpperCase().replace(/[^A-Z0-9]/g, '_')}`;
-        }
-
-        // Collects all data from the form inputs
-        function collectFormData() {
-            const data = {};
-            document.querySelectorAll('#report-content input, #report-content textarea').forEach(el => {
-                const id = el.id;
-                if (el.type === 'radio' && el.checked) {
-                    data[el.name] = el.value;
-                } else if (el.type !== 'radio' && id) {
-                    data[id] = el.value;
-                }
-            });
-            // Include image DataURLs
-            data.batteryPhotoDataUrl = batteryPhotoDataUrl;
-            data.ratingPhotoDataUrl = ratingPhotoDataUrl;
-            return data;
-        }
-
-        // Populates the form with stored data
-        function populateForm(data) {
-            // Populate simple inputs and textareas
-            document.querySelectorAll('#report-content input, #report-content textarea').forEach(el => {
-                const id = el.id;
-                if (id in data) {
-                    el.value = data[id];
-                }
-            });
-
-            // Populate radio buttons and hidden scores
-            const radioNames = ['charge_result_radio', 'discharge_result_radio', 'overall_result_radio'];
-            radioNames.forEach(name => {
-                if (data[name]) {
-                    const radio = document.querySelector(`input[name="${name}"][value="${data[name]}"]`);
-                    if (radio) {
-                        radio.checked = true;
-                        // Also update the hidden score input based on the radio's data-score
-                        const score = parseInt(radio.getAttribute('data-score'));
-                        if (name === 'charge_result_radio') {
-                            document.getElementById('charge_score_input').value = score;
-                        } else if (name === 'discharge_result_radio') {
-                            document.getElementById('discharge_score_input').value = score;
-                        }
-                    }
-                }
-            });
-            
-            // Repopulate images
-            batteryPhotoDataUrl = data.batteryPhotoDataUrl || null;
-            ratingPhotoDataUrl = data.ratingPhotoDataUrl || null;
-            
-            renderImagePreview('preview_battery', batteryPhotoDataUrl);
-            renderImagePreview('preview_rating', ratingPhotoDataUrl);
-
-            // Re-trigger visual updates (including score consistency button highlights)
-            updateCapacitySummary();
-            updateScoreSummary(data); 
-        }
-
-        // Function to load a draft from localStorage
-        function loadDraft(serialNumber) {
-            if (!serialNumber) return;
-
-            showStatus(`Searching for draft report for S/N: ${serialNumber}...`, false, true);
-            
-            try {
-                const key = getStorageKey(serialNumber);
-                const storedData = localStorage.getItem(key);
-                
-                if (storedData) {
-                    const data = JSON.parse(storedData);
-                    populateForm(data);
-                    showStatus(`Report Draft loaded successfully for S/N: ${serialNumber}.`, false);
-                } else {
-                    showStatus(`No draft found for S/N: ${serialNumber}. Starting new report.`, false);
-                }
-            } catch (error) {
-                console.error("Error loading draft from localStorage:", error);
-                showStatus(`Error loading draft for S/N: ${serialNumber}. Check console.`, true);
-            }
-        }
-
-        // Function to save the report draft to localStorage
-        function saveDraft() {
-            const serialNumber = document.getElementById('serial_number').value.trim();
-            if (!serialNumber) {
-                // If serial number is missing, don't try to save, but also don't show an error on auto-save tick.
-                return;
-            }
-
-            // Get the save button text element separately to prevent it from being hidden on crash
-            const saveButtonText = document.getElementById('save_button_text');
-            if (saveButtonText) {
-                // FIX: Added check to prevent setting textContent on null if the save button itself is not ready
-                try {
-                    saveButtonText.textContent = 'Saving...';
-                } catch (e) {
-                    console.warn("Could not set save button text during save.");
-                }
-            }
-
-            try {
-                const reportData = collectFormData();
-                const key = getStorageKey(serialNumber);
-                localStorage.setItem(key, JSON.stringify(reportData));
-                
-                showStatus(`Report Draft saved successfully for S/N: ${serialNumber} (Browser Storage).`, false);
-            } catch (error) {
-                console.error("Error saving draft to localStorage:", error);
-                showStatus(`Error saving draft for S/N: ${serialNumber}. Check console.`, true);
-            } finally {
-                if (saveButtonText) {
-                    // FIX: Added check to prevent setting textContent on null
-                    try {
-                        saveButtonText.textContent = 'Save Draft';
-                    } catch (e) {
-                        console.warn("Could not restore save button text.");
-                    }
-                }
-            }
-        }
         
         // --- UI/UX AND LOGIC ---
 
         function renderImagePreview(previewId, dataUrl) {
             const preview = document.getElementById(previewId);
-            if (!preview) return; // Defensive check
+            if (!preview) return;
             
             preview.innerHTML = '';
             if (dataUrl) {
@@ -465,7 +326,7 @@
         // Function to handle image file selection and preview
         function setupImageInput(inputId, previewId, dataUrlCallback) {
             const input = document.getElementById(inputId);
-            if (!input) return; // Defensive check
+            if (!input) return;
             
             input.addEventListener('change', function() {
                 if (this.files && this.files[0]) {
@@ -473,9 +334,6 @@
                     reader.onload = function(e) {
                         dataUrlCallback(e.target.result);
                         renderImagePreview(previewId, e.target.result);
-                        // Auto-save draft on image change
-                        clearTimeout(pendingSaveTimeout);
-                        pendingSaveTimeout = setTimeout(saveDraft, 2000);
                     }
                     reader.readAsDataURL(this.files[0]);
                 } else {
@@ -485,15 +343,13 @@
             });
         }
         
-        // *** CRITICAL FIX: Robust element access inside showStatus ***
         function showStatus(message, isError = false, showSpinner = false) {
             const statusDiv = document.getElementById('status_message');
             const spinner = document.getElementById('loading_spinner');
             
-            // CRITICAL FIX: If the main element is null, log a warning and exit, preventing the crash.
-            if (!statusDiv) {
-                console.warn("Status UI not ready. Message:", message, "Error:", isError);
-                return; 
+            if (!statusDiv || !spinner) {
+                 console.warn("Status UI elements missing.");
+                 return;
             }
             
             statusDiv.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700', 'bg-blue-100', 'text-blue-700');
@@ -506,32 +362,14 @@
                 statusDiv.classList.add('bg-green-100', 'text-green-700');
             }
             
-            // Handle spinner display
             const messageSpan = statusDiv.querySelector('span');
-            
             if (showSpinner) {
-                 if (messageSpan) {
-                     // FIX: Ensure message is set using messageSpan
-                     messageSpan.textContent = message;
-                 } else {
-                     statusDiv.textContent = message; // Fallback
-                 }
+                 if (messageSpan) messageSpan.textContent = message;
                  statusDiv.classList.add('flex', 'items-center', 'justify-between');
-                 if (spinner) {
-                    spinner.classList.remove('hidden');
-                 }
+                 spinner.classList.remove('hidden');
             } else {
-                 // Simplifies text for non-loading states
-                 if (messageSpan) {
-                     // FIX: Set status message text content
-                     statusDiv.textContent = message;
-                 } else {
-                     statusDiv.textContent = message;
-                 }
-                 
-                 if (spinner) {
-                    spinner.classList.add('hidden');
-                 }
+                 if (messageSpan) messageSpan.textContent = message;
+                 spinner.classList.add('hidden');
                  statusDiv.classList.remove('flex', 'items-center', 'justify-between');
             }
         }
@@ -543,64 +381,39 @@
             percentage = isNaN(percentage) ? 0 : Math.min(100, percentage).toFixed(2);
 
             const summaryElement = document.getElementById('capacity_summary');
-            if (summaryElement) { // Defensive check
+            if (summaryElement) {
                 summaryElement.innerHTML = `Capacity Delivered: <span class="text-indigo-600 font-bold">${deliveredAh.toFixed(1)} Ah</span> of <span class="text-indigo-600 font-bold">${nominalAh.toFixed(1)} Ah</span> (<span class="text-lg">${percentage}%</span>)`;
             }
         }
 
-        function updateScoreSummary(data = null) {
-            // Retrieve scores from hidden inputs or provided data
-            const getScore = (name) => {
-                if (data && data[`${name}_input`]) {
-                    // This handles initial loading from localStorage
-                    const savedScore = data[`${name}_input`];
-                    // Find the hidden input and set its value to ensure continuity
-                    const hiddenInput = document.querySelector(`input[name="${name}_input"]`);
-                    if (hiddenInput) { hiddenInput.value = savedScore; }
-                    return parseInt(savedScore) || 0;
-                }
-                const input = document.querySelector(`input[name="${name}_input"]`);
-                return parseInt(input?.value) || 0;
-            };
+        function updateScoreSummary() {
+            const getScore = (id) => parseInt(document.getElementById(id)?.value) || 0;
             
-            // Note: The hidden inputs are named ocv_score_input, volt_spread_score_input, etc.
             const scores = {
-                voltage_ocv: getScore('ocv_score'),
-                voltage_spread: getScore('volt_spread_score'),
-                resistance_avg: getScore('avg_res_score'),
-                resistance_spread: getScore('res_spread_score'),
-                charge: parseInt(document.getElementById('charge_score_input')?.value) || 0,
-                discharge: parseInt(document.getElementById('discharge_score_input')?.value) || 0,
+                voltage_ocv: parseInt(document.querySelector('input[name="ocv_score_input"]')?.value) || 0,
+                voltage_spread: parseInt(document.querySelector('input[name="volt_spread_score_input"]')?.value) || 0,
+                resistance_avg: parseInt(document.querySelector('input[name="avg_res_score_input"]')?.value) || 0,
+                resistance_spread: parseInt(document.querySelector('input[name="res_spread_score_input"]')?.value) || 0,
+                charge: getScore('charge_score_input'),
+                discharge: getScore('discharge_score_input'),
             };
 
-            // Set visual state for buttons based on scores
-            const setButtonState = (category, score) => {
-                document.querySelectorAll(`div[data-category="${category}"] .score-button`).forEach(btn => {
-                    btn.classList.remove('selected-score');
-                    if (parseInt(btn.getAttribute('data-score')) === score) {
-                        btn.classList.add('selected-score');
-                    }
-                });
-            };
-
-            setButtonState('ocv', scores.voltage_ocv);
-            setButtonState('volt_spread', scores.voltage_spread);
-            setButtonState('avg_res', scores.resistance_avg);
-            setButtonState('res_spread', scores.resistance_spread);
-
-            // Calculate totals
             const totalVoltage = scores.voltage_ocv + scores.voltage_spread;
             const totalResistance = scores.resistance_avg + scores.resistance_spread;
             const totalScore = totalVoltage + totalResistance + scores.charge + scores.discharge;
 
-            // Update display (defensive checks added)
-            document.getElementById('score_voltage') && (document.getElementById('score_voltage').textContent = `${totalVoltage} / 4`);
-            document.getElementById('score_resistance') && (document.getElementById('score_resistance').textContent = `${totalResistance} / 4`);
-            document.getElementById('score_charge') && (document.getElementById('score_charge').textContent = `${scores.charge} / 2`);
-            document.getElementById('score_discharge') && (document.getElementById('score_discharge').textContent = `${scores.discharge} / 2`);
-            document.getElementById('score_total') && (document.getElementById('score_total').textContent = `${totalScore} / 12`);
+            // Helper to safely update text
+            const setText = (id, text) => {
+                const el = document.getElementById(id);
+                if(el) el.textContent = text;
+            };
 
-            // Update Banding Highlight
+            setText('score_voltage', `${totalVoltage} / 4`);
+            setText('score_resistance', `${totalResistance} / 4`);
+            setText('score_charge', `${scores.charge} / 2`);
+            setText('score_discharge', `${scores.discharge} / 2`);
+            setText('score_total', `${totalScore} / 12`);
+
             document.querySelectorAll('#banding_list li').forEach(li => {
                 li.classList.remove('bg-indigo-100', 'ring-2', 'ring-indigo-500');
                 const range = li.getAttribute('data-range').split('-');
@@ -614,11 +427,10 @@
         }
 
         // Main function to generate and save the PDF
-        async function generatePDF(download = true) {
-            // CRITICAL CHECK: Ensure jsPDF library is loaded
+        async function generatePDF() {
+            // Check if libraries are loaded
             if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF !== 'function') {
-                showStatus('Error: PDF library not loaded. Please try refreshing the page.', true);
-                console.error("jsPDF object is missing or incomplete.");
+                showStatus('Error: PDF library not loaded. Please refresh the page.', true);
                 return;
             }
 
@@ -629,45 +441,35 @@
             }
 
             const downloadButton = document.getElementById('download_button');
-            const emailButton = document.getElementById('email_button');
-            
-            // Disable buttons and show loading status
             if(downloadButton) downloadButton.disabled = true;
-            if(emailButton) emailButton.disabled = true;
-            showStatus('Generating PDF report...', false, true);
+            showStatus('Generating PDF report... Please wait.', false, true);
 
-            // Temporarily hide interactive elements for a clean capture
-            const controlsToHide = document.querySelectorAll('input:not([type="hidden"]), textarea, button:not(#download_button):not(#email_button):not(#save_button_text), .score-button, .form-radio');
+            // Hide controls for clean PDF
+            const controlsToHide = document.querySelectorAll('input:not([type="hidden"]), textarea, button, .score-button, .form-radio');
             controlsToHide.forEach(el => el.style.display = 'none');
             const input = document.getElementById('report-content');
 
             try {
-                // Wait for the next frame to ensure elements are hidden before capturing
-                await new Promise(resolve => setTimeout(resolve, 50)); 
+                await new Promise(resolve => setTimeout(resolve, 100)); 
                 
-                const canvas = await html2canvas(input, { scale: 2, useCORS: true, logging: true });
+                const canvas = await html2canvas(input, { scale: 2, useCORS: true });
                 const { jsPDF } = window.jspdf; 
                 const pdf = new jsPDF('p', 'mm', 'a4');
                 const pdfWidth = pdf.internal.pageSize.getWidth();
                 const pdfHeight = pdf.internal.pageSize.getHeight();
                 const imgData = canvas.toDataURL('image/png');
                 const imgProps = pdf.getImageProperties(imgData);
-                const contentHeight = (imgProps.height * pdfWidth) / imgProps.width; // Height of the captured image if scaled to PDF width
+                const contentHeight = (imgProps.height * pdfWidth) / imgProps.width; 
                 
-                // --- CORRECTED MULTI-PAGE LOGIC ---
+                // Multi-page logic
                 let position = 0;
                 while (position < contentHeight) {
                     if (position > 0) {
                         pdf.addPage();
                     }
-                    // Add image portion: (image data, format, x, y, width, height, alias, compression, rotation)
-                    // The y coordinate is negative to pull the image up to the top of the viewport
                     pdf.addImage(imgData, 'PNG', 0, -position, pdfWidth, contentHeight);
-
                     position += pdfHeight;
                 }
-                // --- END CORRECTED MULTI-PAGE LOGIC ---
-
 
                 // Add Photos Page
                 if (batteryPhotoDataUrl || ratingPhotoDataUrl) {
@@ -678,20 +480,16 @@
                     
                     let currentY = 25;
                     const photoWidth = 180;
-                    const photoMargin = 5;
+                    const photoMargin = 10;
 
-                    // Helper function to create an Image object and calculate aspect-ratio height
                     const getImageDimensions = (dataUrl, targetWidth) => {
                         return new Promise(resolve => {
                             const img = new Image();
                             img.onload = () => {
                                 const aspectRatio = img.height / img.width;
-                                resolve({ 
-                                    width: targetWidth, 
-                                    height: targetWidth * aspectRatio 
-                                });
+                                resolve({ width: targetWidth, height: targetWidth * aspectRatio });
                             };
-                            img.onerror = () => resolve({ width: 0, height: 0 }); // Handle load failure
+                            img.onerror = () => resolve({ width: 0, height: 0 });
                             img.src = dataUrl;
                         });
                     };
@@ -699,146 +497,85 @@
                     if (batteryPhotoDataUrl) {
                         pdf.text('1. Battery Physical Photo:', 10, currentY);
                         currentY += 5;
-                        const { width: imgW1, height: imgH1 } = await getImageDimensions(batteryPhotoDataUrl, photoWidth);
-                        pdf.addImage(batteryPhotoDataUrl, 'JPEG', 15, currentY, imgW1, imgH1);
-                        currentY += imgH1 + photoMargin + 10;
+                        const { width: w1, height: h1 } = await getImageDimensions(batteryPhotoDataUrl, photoWidth);
+                        pdf.addImage(batteryPhotoDataUrl, 'JPEG', 15, currentY, w1, h1);
+                        currentY += h1 + photoMargin + 10;
                     }
 
                     if (ratingPhotoDataUrl) {
-                        if (currentY > pdfHeight - 100) { pdf.addPage(); currentY = 20; }
+                        if (currentY > pdfHeight - 80) { pdf.addPage(); currentY = 20; }
                         pdf.text('2. Rating Screenshot:', 10, currentY);
                         currentY += 5;
-                        const { width: imgW2, height: imgH2 } = await getImageDimensions(ratingPhotoDataUrl, photoWidth);
-                        pdf.addImage(ratingPhotoDataUrl, 'JPEG', 15, currentY, imgW2, imgH2);
+                        const { width: w2, height: h2 } = await getImageDimensions(ratingPhotoDataUrl, photoWidth);
+                        pdf.addImage(ratingPhotoDataUrl, 'JPEG', 15, currentY, w2, h2);
                     }
                 }
 
-                const filename = `${serialNumber}.pdf`;
-
-                if (download) {
-                    pdf.save(filename);
-                    showStatus(`PDF generated successfully and saved as ${filename}.`, false);
-                } else {
-                    // This is used for the email function
-                    return pdf.output('blob'); 
-                }
+                pdf.save(`${serialNumber}.pdf`);
+                showStatus(`PDF downloaded successfully: ${serialNumber}.pdf`, false);
                 
             } catch (error) {
-                console.error('PDF Generation Fatal Error:', error);
-                showStatus('Error generating PDF. Please check the browser console (F12) for details on the error.', true);
-                
+                console.error('PDF Generation Error:', error);
+                showStatus('Error generating PDF. See console for details.', true);
             } finally {
-                // Restore hidden elements
+                // Restore controls
                 controlsToHide.forEach(el => el.style.display = '');
                 if(downloadButton) downloadButton.disabled = false;
-                if(emailButton) emailButton.disabled = false;
             }
-        }
-
-        async function emailReport() {
-            const serialNumber = document.getElementById('serial_number')?.value.trim();
-            if (!serialNumber) {
-                showStatus('Error: Please enter the Battery Serial Number before trying to email.', true);
-                return;
-            }
-
-            // Inform the user that attachment is manual
-            showStatus('PDF is generating. Once the download begins, a new window/tab will open to draft the email. Please remember to attach the downloaded file.', false, true);
-
-            // Generate the PDF file (forcing download=true)
-            await generatePDF(true);
-            
-            // After PDF generation (download is initiated by generatePDF), proceed to open mailto link
-            const subject = `24V Battery Assessment Report - S/N: ${serialNumber}`;
-            const body = `Please find the attached Battery Quality Assessment Report for battery serial number ${serialNumber}.%0A%0AThe file is named ${serialNumber}.pdf.%0A%0AReport generated by ${document.getElementById('assessor_name')?.value || 'an assessor'} on: ${new Date().toLocaleDateString()}`;
-            
-            // Add a slight delay to ensure the browser has initiated the download dialogue
-            setTimeout(() => {
-                // Open mailto link which drafts an email and instructs the user to attach the file
-                window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-                showStatus('Email draft opened. Please attach the downloaded PDF file.', false);
-            }, 1500); 
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            // Document Date Default
             document.getElementById('assessment_date').valueAsDate = new Date();
 
-            // Set initial selection state for score buttons
+            // Initial score button states
             document.querySelectorAll('div[data-category]').forEach(container => {
                 const category = container.getAttribute('data-category');
-                // Use a default score of 2 for voltage/resistance consistency
-                const defaultScore = (category === 'ocv' || category === 'volt_spread' || category === 'avg_res' || category === 'res_spread') ? 2 : 0;
+                const defaultScore = (['ocv', 'volt_spread', 'avg_res', 'res_spread'].includes(category)) ? 2 : 0;
                 
-                // Initialize hidden input
                 const hiddenInput = container.querySelector('input[type="hidden"]');
-                if (hiddenInput) { hiddenInput.value = defaultScore; }
+                if (hiddenInput) hiddenInput.value = defaultScore;
 
-                // Click the button corresponding to the score (2) to set visual state
                 const defaultButton = container.querySelector(`button[data-score="${defaultScore}"]`);
-                if (defaultButton) { defaultButton.classList.add('selected-score'); }
+                if (defaultButton) defaultButton.classList.add('selected-score');
             });
 
-            // Input handlers
-            document.querySelectorAll('input, textarea').forEach(input => {
-                input.addEventListener('input', () => {
-                    clearTimeout(pendingSaveTimeout);
-                    pendingSaveTimeout = setTimeout(saveDraft, 2000); // 2 second debounce
-                    if (input.id === 'nominal_ah' || input.id === 'delivered_ah') {
-                        updateCapacitySummary();
-                    }
-                });
-            });
+            // Input handlers for capacity summary
+            document.getElementById('nominal_ah')?.addEventListener('input', updateCapacitySummary);
+            document.getElementById('delivered_ah')?.addEventListener('input', updateCapacitySummary);
 
             // Score button handlers
             document.querySelectorAll('button[data-score]').forEach(button => {
                 button.addEventListener('click', function() {
                     const container = this.closest('div[data-category]');
-                    const category = container.getAttribute('data-category');
                     const score = parseInt(this.getAttribute('data-score'));
                     
-                    // Update hidden input
                     const input = container.querySelector('input[type="hidden"]');
-                    if (input) { input.value = score; }
+                    if (input) input.value = score;
 
-                    // Highlight selection
                     container.querySelectorAll('.score-button').forEach(btn => btn.classList.remove('selected-score'));
                     this.classList.add('selected-score');
 
                     updateScoreSummary();
-                    clearTimeout(pendingSaveTimeout);
-                    pendingSaveTimeout = setTimeout(saveDraft, 1000); 
                 });
             });
 
-            // Radio button handlers (Charge/Discharge Results)
+            // Radio button handlers
             document.querySelectorAll('input[type="radio"]').forEach(radio => {
                 radio.addEventListener('change', function() {
                     const score = parseInt(this.getAttribute('data-score'));
-                    if (this.name === 'charge_result_radio') {
-                        document.getElementById('charge_score_input').value = score;
-                    } else if (this.name === 'discharge_result_radio') {
-                        document.getElementById('discharge_score_input').value = score;
+                    const targetId = (this.name === 'charge_result_radio') ? 'charge_score_input' : 
+                                     (this.name === 'discharge_result_radio') ? 'discharge_score_input' : null;
+                    
+                    if (targetId) {
+                        document.getElementById(targetId).value = score;
+                        updateScoreSummary();
                     }
-                    updateScoreSummary();
-                    clearTimeout(pendingSaveTimeout);
-                    pendingSaveTimeout = setTimeout(saveDraft, 1000); 
                 });
             });
-
-            // Serial Number handler for loading drafts
-            document.getElementById('serial_number')?.addEventListener('blur', function() {
-                const sn = this.value.trim();
-                if (sn) {
-                    loadDraft(sn);
-                }
-            });
             
-            // Image input setup
             setupImageInput('photo_battery', 'preview_battery', (url) => batteryPhotoDataUrl = url);
             setupImageInput('photo_rating', 'preview_rating', (url) => ratingPhotoDataUrl = url);
 
-            // Initial visual updates
             updateCapacitySummary();
             updateScoreSummary();
         });
