@@ -46,6 +46,12 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        /* PDF specific styles (applied during generation) */
+        .pdf-value-text {
+            font-weight: 600;
+            color: #111827;
+            font-family: 'Inter', sans-serif;
+        }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -97,15 +103,15 @@
                     <div>
                         <h3 class="text-lg font-medium text-gray-800 mb-2">Battery Physical Photo</h3>
                         <input type="file" id="photo_battery" accept="image/*" capture="environment" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
-                        <div id="preview_battery" class="mt-3 h-32 w-full bg-gray-100 rounded-lg flex items-center justify-center text-sm text-gray-400 overflow-hidden">
-                            Image Preview
+                        <div id="preview_battery" class="mt-3 h-32 w-full bg-gray-100 rounded-lg flex items-center justify-center text-sm text-gray-400 overflow-hidden border border-gray-200">
+                            <span class="text-gray-400">Image Preview</span>
                         </div>
                     </div>
                     <div>
                         <h3 class="text-lg font-medium text-gray-800 mb-2">Rating Screenshot (e.g., BMS App)</h3>
                         <input type="file" id="photo_rating" accept="image/*" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
-                        <div id="preview_rating" class="mt-3 h-32 w-full bg-gray-100 rounded-lg flex items-center justify-center text-sm text-gray-400 overflow-hidden">
-                            Image Preview
+                        <div id="preview_rating" class="mt-3 h-32 w-full bg-gray-100 rounded-lg flex items-center justify-center text-sm text-gray-400 overflow-hidden border border-gray-200">
+                             <span class="text-gray-400">Image Preview</span>
                         </div>
                     </div>
                 </div>
@@ -319,7 +325,7 @@
                 img.className = 'w-full h-full object-cover';
                 preview.appendChild(img);
             } else {
-                preview.innerHTML = 'Image Preview';
+                preview.innerHTML = '<span class="text-gray-400">Image Preview</span>';
             }
         }
 
@@ -426,6 +432,113 @@
             });
         }
 
+        // --- NEW HELPER FUNCTION FOR PREPARING DOM FOR PDF ---
+        function prepareForPdf() {
+             const replacements = [];
+             const container = document.getElementById('report-content');
+
+             // 1. Replace Input Fields and Textareas with SPANs
+             const inputs = container.querySelectorAll('input:not([type="hidden"]), textarea');
+             inputs.forEach(input => {
+                 if(input.type === 'file' || input.type === 'radio' || input.type === 'checkbox') return;
+                 
+                 const span = document.createElement('span');
+                 span.className = 'pdf-value-text';
+                 span.textContent = input.value || '-'; // Use placeholder if empty? No, just -
+                 
+                 input.style.display = 'none';
+                 input.parentNode.insertBefore(span, input);
+                 replacements.push({ el: input, replacement: span, type: 'input' });
+             });
+
+             // 2. Handle Score Buttons (Good/Acceptable/Poor)
+             const scoreGroups = container.querySelectorAll('div[data-category]');
+             scoreGroups.forEach(group => {
+                 const category = group.getAttribute('data-category');
+                 // Skip Charge/Discharge Results (handled separately if they use radio logic, but wait, they are radios!)
+                 // Actually, the score buttons are div[data-category] with buttons inside.
+                 // The radios are inputs.
+                 
+                 // For score buttons (Voltage/Resistance sections):
+                 const selectedBtn = group.querySelector('.selected-score');
+                 let text = "Not Selected";
+                 let colorClass = "text-gray-500";
+
+                 if(selectedBtn) {
+                     text = selectedBtn.textContent;
+                     // Determine color based on text content
+                     if(text.includes('Good')) colorClass = 'text-green-700';
+                     else if(text.includes('Acceptable')) colorClass = 'text-yellow-700';
+                     else if(text.includes('Poor')) colorClass = 'text-red-700';
+                     else if(text.includes('PASS')) colorClass = 'text-green-700';
+                     else if(text.includes('FAIL')) colorClass = 'text-red-700';
+                 } else {
+                     // Check for radios inside this group (Charge/Discharge/Overall)
+                     const checkedRadio = group.querySelector('input[type="radio"]:checked');
+                     if(checkedRadio) {
+                        const label = checkedRadio.parentNode.querySelector('span');
+                        text = label ? label.textContent : checkedRadio.value;
+                         if(text.includes('PASS')) colorClass = 'text-green-700';
+                         else if(text.includes('CAUTION')) colorClass = 'text-yellow-700';
+                         else if(text.includes('FAIL')) colorClass = 'text-red-700';
+                     } else {
+                         // Special case for Overall Result which uses id="overall_result" not data-category
+                         // Wait, Overall Result div has id="overall_result".
+                     }
+                 }
+                 
+                 // If it's a radio group for charge/discharge, we need to handle differently if it wasn't caught above
+                 // The code structure uses data-category for charge_result/discharge_result too.
+
+                 const span = document.createElement('span');
+                 span.className = `pdf-value-text ${colorClass} text-lg`;
+                 span.textContent = text;
+
+                 group.style.display = 'none';
+                 group.parentNode.insertBefore(span, group);
+                 replacements.push({ el: group, replacement: span, type: 'group' });
+             });
+
+             // 3. Handle Overall Result (Special ID case)
+             const overallGroup = document.getElementById('overall_result');
+             if(overallGroup) {
+                 const checkedRadio = overallGroup.querySelector('input[type="radio"]:checked');
+                 let text = "Not Selected";
+                 let colorClass = "text-gray-500";
+                 if(checkedRadio) {
+                     if(checkedRadio.value === 'PASS') {
+                         text = "PASS";
+                         colorClass = "text-green-700 font-bold text-xl";
+                     } else {
+                         text = "FAIL";
+                         colorClass = "text-red-700 font-bold text-xl";
+                     }
+                 }
+                 const span = document.createElement('span');
+                 span.className = `pdf-value-text ${colorClass}`;
+                 span.textContent = text;
+                 
+                 overallGroup.style.display = 'none';
+                 overallGroup.parentNode.insertBefore(span, overallGroup);
+                 replacements.push({ el: overallGroup, replacement: span, type: 'group' });
+             }
+
+             return replacements;
+        }
+
+        function restoreFromPdf(replacements) {
+            replacements.forEach(item => {
+                if(item.type === 'input') {
+                    item.el.style.display = ''; // Restore visibility
+                    item.replacement.remove();  // Remove text span
+                } else if(item.type === 'group') {
+                    item.el.style.display = 'flex'; // Restore flex display for groups
+                    item.replacement.remove();
+                }
+            });
+        }
+
+
         // Main function to generate and save the PDF
         async function generatePDF() {
             // Check if libraries are loaded
@@ -444,9 +557,13 @@
             if(downloadButton) downloadButton.disabled = true;
             showStatus('Generating PDF report... Please wait.', false, true);
 
-            // Hide controls for clean PDF
-            const controlsToHide = document.querySelectorAll('input:not([type="hidden"]), textarea, button, .score-button, .form-radio');
-            controlsToHide.forEach(el => el.style.display = 'none');
+            // 1. Transform Form for Printing (Hide inputs, show Text)
+            const replacements = prepareForPdf();
+            
+            // Hide other UI elements
+            const controlsToHide = document.querySelectorAll('button, .file-input-ui'); // Add classes if needed
+            controlsToHide.forEach(el => el.style.visibility = 'hidden'); // Use visibility to keep layout
+
             const input = document.getElementById('report-content');
 
             try {
@@ -518,8 +635,11 @@
                 console.error('PDF Generation Error:', error);
                 showStatus('Error generating PDF. See console for details.', true);
             } finally {
-                // Restore controls
-                controlsToHide.forEach(el => el.style.display = '');
+                // Restore Form State
+                restoreFromPdf(replacements);
+                
+                // Restore Controls
+                controlsToHide.forEach(el => el.style.visibility = '');
                 if(downloadButton) downloadButton.disabled = false;
             }
         }
